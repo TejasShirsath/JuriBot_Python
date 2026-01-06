@@ -90,3 +90,6 @@ coverage.xml
 
 # mypy
 .mypy_cache/
+
+Tesseract-OCR/
+poppler-25.12.0/

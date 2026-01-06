@@ -1,27 +1,58 @@
 """
-Google Gemini 2.0 Flash Integration for JuriBot
+OpenRouter GPT Integration for JuriBot
 Handles all AI reasoning, summarization, and advisory functions
+Using OpenRouter's openai/gpt-oss-120b:free model
 """
 
-import google.generativeai as genai
+from openai import OpenAI
 import streamlit as st
 from typing import Dict, List, Optional
 import time
 
 
 class GeminiFlash:
-    """Wrapper class for Google Gemini 2.0 Flash API"""
+    """Wrapper class for OpenRouter API (OpenAI-compatible)"""
 
     def __init__(self, api_key: str):
         """
-        Initialize Gemini Flash client
+        Initialize OpenRouter client
 
         Args:
-            api_key: Google Gemini API key
+            api_key: OpenRouter API key
         """
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-2.0-flash-exp")
-        self.chat = None
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+            default_headers={
+                "HTTP-Referer": "http://localhost:8501",
+                "X-Title": "JuriBot Legal Assistant",
+            },
+        )
+        self.model = "openai/gpt-oss-120b:free"
+        self.chat_history = []
+
+    def _generate_content(self, prompt: str) -> str:
+        """
+        Generate content using OpenRouter API
+
+        Args:
+            prompt: The prompt to send
+
+        Returns:
+            Generated text response
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                extra_headers={
+                    "HTTP-Referer": "http://localhost:8501",
+                    "X-Title": "JuriBot Legal Assistant",
+                },
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"Error: {str(e)}"
 
     def analyze_legal_document(
         self, document_text: str, language: str = "English"
@@ -34,7 +65,7 @@ class GeminiFlash:
             language: Language of the document
 
         Returns:
-            Structured analysis from Gemini
+            Structured analysis from AI
         """
         prompt = f"""You are JuriBot, an AI legal advisor for Indian law.
 Analyze this legal document and provide structured output in the following format:
@@ -60,11 +91,7 @@ Document Text:
 
 Provide detailed, actionable insights specific to Indian legal context."""
 
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            return f"Error during analysis: {str(e)}"
+        return self._generate_content(prompt)
 
     def chat_message(self, user_message: str, context: Optional[str] = None) -> str:
         """
@@ -87,11 +114,7 @@ Provide clear, helpful responses to legal queries. Always remind users that this
 
 {full_message}"""
 
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            return f"Error: {str(e)}"
+        return self._generate_content(prompt)
 
     def start_chat(self, initial_message: Optional[str] = None):
         """
@@ -100,19 +123,20 @@ Provide clear, helpful responses to legal queries. Always remind users that this
         Args:
             initial_message: Optional initial system message
         """
-        history = []
+        self.chat_history = [
+            {
+                "role": "system",
+                "content": "I am JuriBot, an AI legal advisor for Indian law. I'll provide informational guidance while reminding users to consult qualified professionals.",
+            }
+        ]
         if initial_message:
-            history.append({"role": "user", "parts": [initial_message]})
-            history.append(
+            self.chat_history.append({"role": "user", "content": initial_message})
+            self.chat_history.append(
                 {
-                    "role": "model",
-                    "parts": [
-                        "I understand. I am JuriBot, an AI legal advisor for Indian law. I'll provide informational guidance while reminding users to consult qualified professionals."
-                    ],
+                    "role": "assistant",
+                    "content": "I understand. I am JuriBot, an AI legal advisor for Indian law. I'll provide informational guidance while reminding users to consult qualified professionals.",
                 }
             )
-
-        self.chat = self.model.start_chat(history=history)
 
     def send_chat_message(self, message: str) -> str:
         """
@@ -124,12 +148,23 @@ Provide clear, helpful responses to legal queries. Always remind users that this
         Returns:
             AI response
         """
-        if self.chat is None:
+        if not self.chat_history:
             self.start_chat()
 
+        self.chat_history.append({"role": "user", "content": message})
+
         try:
-            response = self.chat.send_message(message)
-            return response.text
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=self.chat_history,
+                extra_headers={
+                    "HTTP-Referer": "http://localhost:8501",
+                    "X-Title": "JuriBot Legal Assistant",
+                },
+            )
+            assistant_message = response.choices[0].message.content
+            self.chat_history.append({"role": "assistant", "content": assistant_message})
+            return assistant_message
         except Exception as e:
             return f"Error: {str(e)}"
 
@@ -155,11 +190,7 @@ Conversation:
 
 Provide a concise summary in bullet points."""
 
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            return f"Error during summarization: {str(e)}"
+        return self._generate_content(prompt)
 
     def simulate_case_search(self, query: str) -> str:
         """
@@ -188,11 +219,7 @@ Query: {query}
 
 Note: Indicate that these are simulated/representative results for demonstration purposes."""
 
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            return f"Error during case search: {str(e)}"
+        return self._generate_content(prompt)
 
     def estimate_legal_costs(
         self, case_type: str, location: str, complexity: str, details: str = ""
@@ -227,11 +254,7 @@ Provide:
 
 Format as structured sections. Base estimates on typical Indian legal market rates."""
 
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            return f"Error during cost estimation: {str(e)}"
+        return self._generate_content(prompt)
 
     def translate_text(self, text: str, target_language: str = "Hindi") -> str:
         """
@@ -250,11 +273,7 @@ Maintain legal terminology accuracy.
 Text:
 {text}"""
 
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            return f"Error during translation: {str(e)}"
+        return self._generate_content(prompt)
 
     def detect_and_translate(self, text: str) -> Dict[str, str]:
         """
@@ -276,27 +295,27 @@ Language: [detected language]
 Translation: [English translation or "Already in English"]"""
 
         try:
-            response = self.model.generate_content(prompt)
-            return {"result": response.text}
+            result = self._generate_content(prompt)
+            return {"result": result}
         except Exception as e:
             return {"error": str(e)}
 
 
 def get_gemini_client() -> Optional[GeminiFlash]:
     """
-    Get configured Gemini Flash client from Streamlit secrets
+    Get configured OpenRouter client from Streamlit secrets
 
     Returns:
         GeminiFlash instance or None if not configured
     """
     try:
-        api_key = st.secrets["secrets"]["GEMINI_API_KEY"]
-        if api_key == "YOUR_GEMINI_2_0_FLASH_API_KEY_HERE":
+        api_key = st.secrets["secrets"]["OPENROUTER_API_KEY"]
+        if api_key == "YOUR_OPENROUTER_API_KEY_HERE":
             st.error(
-                "⚠️ Please configure your Gemini API key in .streamlit/secrets.toml"
+                "⚠️ Please configure your OpenRouter API key in .streamlit/secrets.toml"
             )
             return None
         return GeminiFlash(api_key)
     except Exception as e:
-        st.error(f"Error loading Gemini API key: {str(e)}")
+        st.error(f"Error loading OpenRouter API key: {str(e)}")
         return None

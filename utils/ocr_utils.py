@@ -8,12 +8,12 @@ from pdf2image import convert_from_path, convert_from_bytes
 from PIL import Image
 import io
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import tempfile
 
 # Configure Tesseract path (uncomment and modify if needed)
-# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
-
+pytesseract.pytesseract.tesseract_cmd = os.getenv("TESSERACT_PATH")
 def extract_text_from_image(image_file):
     """
     Extract text from an image file using Tesseract OCR

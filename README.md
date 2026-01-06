@@ -7,7 +7,7 @@ AI-powered legal document analysis system for the Indian legal domain. Combines 
 ## Tech Stack
 
 - **Frontend**: Streamlit
-- **AI Engine**: Google Gemini 2.0 Flash
+- **AI Engine**: OpenRouter (openai/gpt-oss-120b:free)
 - **Local NLP**: spaCy, NLTK, Tesseract OCR, pdf2image
 - **Database**: SQLite
 - **Visualization**: Plotly
@@ -60,7 +60,11 @@ AI-powered legal document analysis system for the Indian legal domain. Combines 
 
 7. **Configure API key:**
 
-   - Add your Gemini API key to `.streamlit/secrets.toml`
+   - Add your OpenRouter API key to `.streamlit/secrets.toml`:
+     ```toml
+     [secrets]
+     OPENROUTER_API_KEY = "your-openrouter-api-key-here"
+     ```
 
 8. **Run the application:**
    ```bash

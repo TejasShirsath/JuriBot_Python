@@ -213,7 +213,7 @@ if file_type == "📁 File Upload" and uploaded_file:
             "⚠️ Gemini API not configured. Please add your API key to .streamlit/secrets.toml"
         )
     else:
-        if st.button("🚀 Analyze with Gemini 2.0 Flash", type="primary"):
+        if st.button("🚀 Analyze with AI", type="primary"):
 
             with st.spinner("Analyzing document with AI... This may take a moment."):
 
